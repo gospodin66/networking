@@ -1,0 +1,30 @@
+/usr/bin/expect -c '
+    puts "---- Executing automation command to register runner"
+    set runner "networkingrunner";
+    set github_endpoint "https://github.com/gospodin66/networking";
+    set token "AJAO2T3OKW47VVX4B3CR3PLFWYZGM";
+    set config_path [exec realpath [exec find ../ -type f -name config.sh]];
+
+    spawn /bin/bash $config_path --url $github_endpoint --token $token
+    expect {
+        "\[press Enter for Default\]" {
+            send "\r"
+        }
+        "Enter the name of runner" {
+            send "$runner\r"
+        }
+        "\[press Enter to skip\]" {
+            send "\r"
+        } 
+        "(Y/N) \[press Enter for N\]" {
+            send "\r"
+            exp_continue
+        }
+        "\[press Enter for _work\]" {
+            send "\r"
+            expect eof
+        }
+    }
+    expect eof
+    puts "----- Automation command finished"
+'

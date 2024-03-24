@@ -1,0 +1,8 @@
+P_PLAIN_FILE="/home/tunnel/files/passwords"
+P_ENC_FILE="/home/tunnel/files/enc_passwords.gpg"
+P_KEY_TYPE="RSA"
+P_KEY_LEN=4096
+P_REALNAME="Auto-SSH-Tunnel"
+P_COMMENT="Key for authenticating ssh tunnel."
+P_RECIPIENT_EMAIL="<key_owner_email>"
+P_KEY_EXPIRE=0

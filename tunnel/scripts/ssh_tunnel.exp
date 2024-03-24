@@ -1,0 +1,140 @@
+#!/usr/bin/expect -f
+
+#exp_internal 1
+#set stty_init "raw -echo"
+
+proc handle_with_password { configs } {
+    # set config
+    foreach parmLine $configs {
+        set split [split $parmLine "="];
+        set cf([lindex $split 0]) [lindex $split 1];
+    }
+
+    if {![file exists $cf(PASSWORD_FILE)]} {
+        puts "Error: password file doesn't exist."
+        exit 1
+    }
+
+    stty -echo
+    set passwords [exec gpg --pinentry-mode loopback --no-verbose --decrypt $cf(PASSWORD_FILE) 2>/dev/null]
+    set p [split $passwords "\n"];
+    set p_jump [string trim [lindex $p 0]];
+    set p_dest [string trim [lindex $p 1]];
+    stty echo
+
+    log_user 0
+    spawn ssh -4 \
+              -o "ConnectTimeout=$cf(SSH_CONNECT_TIMEOUT)" \
+              -o "TCPKeepAlive=yes" \
+              -o "ServerAliveInterval 60" \
+              -D "$cf(PROXY_PORT)" \
+              -L "0.0.0.0:$cf(LOCAL_PORT):$cf(DEST_IP):$cf(SSH_PORT)" "$cf(JUMP_USER)@$cf(JUMP_IP)"
+    expect {
+        "*re you sure you want to continue connecting" {
+            send -- "yes\r"
+            exp_continue
+        }
+        "*assword*" {
+            send -- "$p_jump\r"
+        }
+    }
+
+    expect "$cf(JUMP_HOST)"
+    send -- "ssh -4 -o ConnectTimeout=$cf(SSH_CONNECT_TIMEOUT) $cf(DEST_USER)@$cf(DEST_IP)\r"
+    expect {
+        "*re you sure you want to continue connecting" {
+            send -- "yes\r"
+            exp_continue
+        }
+        "*assword*" {
+            send -- "$p_dest\r"
+        }
+    }
+    log_user 1
+    expect "$cf(DEST_HOST)"
+    send -- "date\r"
+    while {1} {
+        exec sleep 180
+        expect "$cf(DEST_HOST)"
+        send -- "date\r"
+    }
+    expect eof
+    wait
+}
+
+
+
+proc handle_with_pubkey { configs } {
+    # set config
+    foreach parmLine $configs {
+        set split [split $parmLine "="];
+        set cf([lindex $split 0]) [lindex $split 1];
+    }
+
+    if {![file exists $cf(LOCAL_KEY_PATH)]} {
+        puts "Error: private key doesn't exist."
+        exit 1
+    }
+    log_user 0
+    spawn ssh -4 \
+              -i "$cf(LOCAL_KEY_PATH)" \
+              -o "ConnectTimeout=$cf(SSH_CONNECT_TIMEOUT)" \
+              -o "TCPKeepAlive=yes" \
+              -o "ServerAliveInterval 60" \
+              -D "$cf(PROXY_PORT)" \
+              -L "0.0.0.0:$cf(LOCAL_PORT):$cf(DEST_IP):$cf(SSH_PORT)" "$cf(JUMP_USER)@$cf(JUMP_IP)"
+    expect "$cf(JUMP_HOST)*"
+    send -- "ssh -i $cf(JUMP_KEY_PATH) -o ConnectTimeout=$cf(SSH_CONNECT_TIMEOUT) $cf(DEST_USER)@$cf(DEST_IP)\r"
+    log_user 1
+    expect "$cf(DEST_HOST)*"
+    send -- "date\r"
+    while {1} {
+        exec sleep 30
+        expect "$cf(DEST_HOST)*"
+        send -- "date\r"
+    }
+    expect eof
+    wait
+}
+
+
+
+if { $argc < 2 } {
+    puts "Please provide <config_file_path> <auth_method>(pubkey|password) arguments."
+    exit 1
+}
+
+set config_file [lindex $argv 0];
+set auth_method [lindex $argv 1];
+
+if {![file exists $config_file]} {
+    puts "Error: config file doesn't exist."
+    exit 1
+}
+
+set f_config [open $config_file r];
+set config_lines [read $f_config];
+close $f_config
+set configs [split $config_lines "\n"];
+# drop empty lines & ansi escape characters
+#set configs [lsearch -all -inline -not -exact $configs {}]
+
+#for {set i 0} {$i < [array size $configs]} {incr i} {
+#    regsub -all {\u00AB\[[\d;]*[A-Za-z]} $configs[${i}] "" $configs[${i}]
+#}
+
+for {set i 0} {$i < [array size $configs]} {incr i} {
+    puts $configs[$i]
+}
+
+
+if { [string tolower $auth_method] == "pubkey" } {
+    handle_with_pubkey $configs
+} elseif { [string tolower $auth_method] == "password" } {
+    handle_with_password $configs
+} else {
+    puts "Error: Invalid authentication method."
+    exit 1
+}
+
+exit 0

@@ -1,0 +1,19 @@
+name: 'Networking Pipeline'
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  networkingpipeline:
+    runs-on: self-hosted
+    steps:
+    - name: Setup network
+      run: ./setup.sh
+      shell: bash
+      working-directory: /home/cheki/workspace/networking/setup
+    - name: Setup tunnel
+      run: ./setup.sh
+      shell: bash
+      working-directory: /home/cheki/workspace/networking/tunnel

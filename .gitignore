@@ -1,0 +1,11 @@
+logs/
+assets/
+storage_volume/*
+.vscode/
+tunnel/configs/.config
+tunnel/configs/.pconfig
+tunnel/configs/.tconfig
+tools/recipients.txt
+tools/.env
+setup/actions-runner/*
+configs/.runnertoken
