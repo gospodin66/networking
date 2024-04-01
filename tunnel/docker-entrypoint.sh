@@ -1,6 +1,6 @@
 #!/bin/sh
 ssh-keygen -A
 
-alias ll="ls -ltra"
+/usr/sbin/sshd -D -e 
 
-exec /usr/sbin/sshd -D -e "$@"
+exec "$@"

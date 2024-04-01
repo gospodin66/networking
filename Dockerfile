@@ -35,13 +35,11 @@ RUN mkdir -p /var/run/sshd \
  && touch ${user_dir}/.ssh/known_hosts \
  && touch ${user_dir}/.ssh/authorized_keys
 
-COPY ./docker-entrypoint-ssh-keygen.sh /usr/local/bin/docker-entrypoint-ssh-keygen.sh
 COPY ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY ./configs/ssh_config /etc/ssh/ssh_config
 COPY ./configs/sshd_config /etc/ssh/sshd_config
 
-RUN chmod +x /usr/local/bin/docker-entrypoint-ssh-keygen.sh; \
-    chmod +x /usr/local/bin/docker-entrypoint.sh; \
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh; \
     chmod 600 /etc/ssh/ssh_config; \
     chmod 600 /etc/ssh/sshd_config; \
     chmod 600 /root/.ssh/known_hosts; \
@@ -56,5 +54,4 @@ RUN echo -n "${user}:${password}" | chpasswd \
 EXPOSE 22
 
 CMD ["tcpdump", "-i", "eth0"]
-
 ENTRYPOINT ["docker-entrypoint.sh"]

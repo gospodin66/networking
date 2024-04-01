@@ -56,4 +56,5 @@ RUN echo -e "jump\ndest" > ${user_dir}/files/passwords && \
 
 EXPOSE 22 
 
+CMD ["tcpdump", "-i", "eth0"]
 ENTRYPOINT ["/docker-entrypoint.sh"]

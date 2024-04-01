@@ -10,18 +10,21 @@ DOCKER_BUILDKIT=1 docker build -t $jump:1.0 . -f DockerfileJUMP.dockerfile && \
 DOCKER_BUILDKIT=1 docker build -t $dest:1.0 . -f DockerfileDEST.dockerfile;
 docker run \
         -dit \
+        --rm \
         --name $user \
         --cap-add NET_ADMIN \
         --mount source=storage,destination="$storage_path" \
         $user:1.0 && \
 docker run \
-        -d \
+        -dit \
+        --rm \
         --name $jump \
         --cap-add NET_ADMIN \
         --mount source=storage,destination="$storage_path" \
         $jump:1.0 && \
 docker run \
         -dit \
+        --rm \
         --name $dest \
         --cap-add NET_ADMIN \
         --mount source=storage,destination="$storage_path" \

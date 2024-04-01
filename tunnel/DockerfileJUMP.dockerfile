@@ -33,4 +33,5 @@ RUN chown -R ${UID}:${GID} ${user_dir}
 
 EXPOSE 22 
 
+CMD ["tcpdump", "-i", "eth0"]
 ENTRYPOINT ["/docker-entrypoint.sh"]
