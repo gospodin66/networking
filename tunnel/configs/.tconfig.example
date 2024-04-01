@@ -1,0 +1,15 @@
+CONFIG_FILE=".config"
+
+LOCAL_USER="tunnel"
+SSH_TESTFILE="./sshtestfile"
+
+#METHOD="pubkey"
+METHOD="password"
+
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=465
+SMTP_USER=<smtp_server_user>
+SMTP_PASSWORD=<smtp_password>
+
+SENDER=<sender>
+RECEIVER=<receiver>

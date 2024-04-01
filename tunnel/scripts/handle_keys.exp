@@ -1,0 +1,100 @@
+#!/usr/bin/expect -f
+
+if { $argc < 1 } {
+    puts "Please provide <config_file_path> argument."
+    exit 1
+}
+
+set config_file [lindex $argv 0];
+
+if {![file exists $config_file]} {
+    puts "Error: config file doesn't exist."
+    exit 1
+}
+
+set f_config [open $config_file];
+set config_lines [read $f_config];
+close $f_config
+set configs [split $config_lines "\n"];
+foreach parmLine $configs {
+    set split [split $parmLine "="];
+    set cf([lindex $split 0]) [lindex $split 1];
+}
+stty -echo
+set passwords [exec gpg --pinentry-mode loopback --no-verbose --decrypt $cf(PASSWORDS_FILE) 2>/dev/null]
+set p [split $passwords "\n"];
+set p_jump [string trim [lindex $p 0]];
+set p_dest [string trim [lindex $p 1]];
+stty echo
+
+puts "\n-- Generating keypair"
+log_user 0
+spawn ssh-keygen -t rsa -b $cf(KEY_LEN) -f $cf(LOCAL_KEY_PATH)
+expect {
+    "Overwrite*" {
+        send "$cf(SSH_OVERWRITE_PUBLIC_KEY)\r"
+        exp_continue
+    }
+    "*assphrase*" {
+        send "\r"
+        exp_continue
+    }
+    "* same passphrase again*" {
+        send "\r"
+        expect eof
+    }
+}
+log_user 1
+
+puts "\n-- Copying public key to jump server"
+log_user 0
+spawn ssh-copy-id -i $cf(LOCAL_KEY_PATH) $cf(JUMP_USER)@$cf(JUMP_IP)
+expect {
+    "*re you sure you want to continue connecting" {
+        send "yes\r"
+        exp_continue
+    }
+    "*assword*" {
+        send "$p_jump\r"
+        expect eof
+    }
+}
+log_user 1
+
+puts "\n-- Connecting to jump server"
+log_user 0
+spawn ssh $cf(JUMP_USER)@$cf(JUMP_IP)
+expect "$cf(JUMP_HOST)"
+puts "\n-- Generating keypair on jump server"
+send "ssh-keygen -t rsa -b $cf(KEY_LEN) -f $cf(JUMP_KEY_PATH)\r"
+expect {
+    "Overwrite*" {
+        send "$cf(SSH_OVERWRITE_PUBLIC_KEY)\r"
+        exp_continue
+    }
+    "*assphrase*" {
+        send "\r"
+        exp_continue
+    }
+    "* same passphrase again*" {
+        send "\r"
+        expect eof
+    }
+}
+expect "$cf(DEST_HOST)"
+puts "\n-- Copying public key to destination server"
+send "ssh-copy-id -i $cf(JUMP_KEY_PATH) $cf(DEST_USER)@$cf(DEST_IP)\r"
+expect {
+    "*re you sure you want to continue connecting" {
+        send "yes\r"
+        exp_continue    
+    }
+    "*assword*" {
+        send "$p_dest\r"
+        expect eof
+    }
+}
+log_user 1
+
+puts "\nSSH keys configured successfuly."
+exit 0

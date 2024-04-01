@@ -1,0 +1,33 @@
+#!/usr/bin/expect -f
+
+#
+# Opens a tunnel via router to net1 & net2
+#
+set netrouter_hostname [lindex $argv 0];
+puts "Opening tunnel: net1-probe 21122:10.110.0.110:22 & net2-probe 21222:10.120.0.120:22 through 10.140.0.140"
+log_user 0
+spawn ssh -L 0.0.0.0:21122:10.110.0.110:22 \
+          -L 0.0.0.0:21222:10.120.0.120:22 \
+          tunneller@10.140.0.140
+expect {
+    "*re you sure you want to continue connecting" {
+        send -- "yes\r"
+        exp_continue
+    }
+    "*assword*" {
+        send -- "tunneller\r"
+    }
+    timeout {
+        puts "Error: Timeout."
+        exit 1
+    }
+}
+log_user 1
+expect "$netrouter_hostname"
+send -- "date\r"
+while {1} {
+    expect "$netrouter_hostname"
+    send -- "date\r"
+    exec sleep 180
+}
+expect eof

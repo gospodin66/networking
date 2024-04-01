@@ -1,0 +1,64 @@
+FROM alpine:3.14
+
+ENV user=tunneller
+# pass in ENV for dev purposes - should use secret 
+ENV password=tunneller
+ENV UID=8922
+ENV GID=8922
+ENV user_dir=/home/${user}
+
+RUN set -ex; \
+    apk update && \
+    apk add openssh \
+            net-tools \
+            iptables \
+            tcpdump \
+            openrc \
+            rsyslog \
+            nmap \
+            bash \
+            conntrack-tools
+RUN rc-update add sshd
+RUN set -ex; addgroup -S "${GID}" && \
+    adduser \
+    -G "${GID}" \
+    --disabled-password \
+    --gecos "" \
+    --home "${user_dir}" \
+    --ingroup "${GID}" \
+    --uid "${UID}" \
+    "${user}"
+
+RUN mkdir -p /var/run/sshd \
+ && mkdir -p -m 700 ${user_dir}/.ssh \
+ && touch ${user_dir}/.ssh/known_hosts \
+ && touch ${user_dir}/.ssh/authorized_keys
+
+
+COPY ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY ./docker-entrypoint-ssh-keygen.sh /usr/local/bin/docker-entrypoint-ssh-keygen.sh
+COPY ./setup/firewall-router.sh /usr/local/bin/firewall-router.sh
+COPY ./configs/ssh_config /etc/ssh/ssh_config
+COPY ./configs/sshd_config /etc/ssh/sshd_config
+
+# allow forwarding on router
+RUN sed -i -e 's/AllowTcpForwarding no/AllowTcpForwarding yes/g' /etc/ssh/sshd_config
+
+RUN chmod +x /usr/local/bin/docker-entrypoint-ssh-keygen.sh; \
+    chmod +x /usr/local/bin/firewall-router.sh; \
+    chmod +x /usr/local/bin/docker-entrypoint.sh; \
+    chmod 0600 /etc/ssh/ssh_config; \
+    chmod 0600 /etc/ssh/sshd_config; \
+    chmod 0600 /root/.ssh/known_hosts; \
+    chmod 0600 /root/.ssh/authorized_keys; \
+    chmod 0600 ${user_dir}/.ssh/known_hosts; \
+    chmod 0600 ${user_dir}/.ssh/authorized_keys
+
+RUN echo -n "${user}:${password}" | chpasswd \
+ && echo -n "root:root" | chpasswd
+
+EXPOSE 22
+
+CMD ["tcpdump", "-i", "eth0"]
+
+ENTRYPOINT ["docker-entrypoint.sh"]

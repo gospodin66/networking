@@ -1,0 +1,51 @@
+#!/usr/bin/expect -f
+
+#
+# Opens a tunnel via router to net1 & net2
+#
+set netrouter_hostname [lindex $argv 0];
+set net1probe_hostname [lindex $argv 1];
+set net2probe_hostname [lindex $argv 2];
+
+# connect to dest
+log_user 0
+spawn ssh -p 1089 dest@localhost
+expect {
+    "*re you sure you want to continue connecting" {
+        send -- "yes\r"
+        exp_continue
+    }
+    "*assword*" {
+        send -- "dest\r"
+    }
+}
+# test net1-probe
+expect "$netrouter_hostname"
+send -- "ssh -p 21122 tunneller@localhost\r"
+expect {
+    "*re you sure you want to continue connecting" {
+        send -- "yes\r"
+        exp_continue
+    }
+    "*assword*" {
+        send -- "tunneller\r"
+    }
+}
+expect "$net1probe_hostname"
+send -- "hostname -i && exit\r"
+# test net2-probe
+expect "$netrouter_hostname"
+send -- "ssh -p 21222 tunneller@localhost\r"
+expect {
+    "*re you sure you want to continue connecting" {
+        send -- "yes\r"
+        exp_continue
+    }
+    "*assword*" {
+        send -- "tunneller\r"
+    }
+}
+expect "$net2probe_hostname"
+send -- "hostname -i && exit\r"
+expect eof
+log_user 1
